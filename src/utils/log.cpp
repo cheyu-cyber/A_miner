@@ -19,7 +19,11 @@ static void vlog(const char* tag, const char* fmt, va_list ap) {
     std::lock_guard<std::mutex> lock(g_log_mutex);
     time_t now = std::time(nullptr);
     struct tm tm_buf;
+#ifdef _WIN32
+    localtime_s(&tm_buf, &now);
+#else
     localtime_r(&now, &tm_buf);
+#endif
     char time_str[20];
     std::strftime(time_str, sizeof(time_str), "%Y-%m-%d %H:%M:%S", &tm_buf);
     std::fprintf(stderr, "[%s] %s: ", time_str, tag);

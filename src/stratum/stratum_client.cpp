@@ -171,7 +171,11 @@ bool StratumClient::send_line(const std::string& json) {
     ssize_t total = 0;
     ssize_t len = static_cast<ssize_t>(json.size());
     while (total < len) {
+#ifdef MSG_NOSIGNAL
         ssize_t n = ::send(m_sock, json.c_str() + total, len - total, MSG_NOSIGNAL);
+#else
+        ssize_t n = ::send(m_sock, json.c_str() + total, len - total, 0);
+#endif
         if (n <= 0) {
             util::log_error("send() failed");
             disconnect();

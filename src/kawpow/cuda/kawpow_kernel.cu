@@ -120,14 +120,12 @@ __global__ void dag_generate_kernel(
     /* XOR index into first word */
     mix[0] ^= idx;
 
-    /* keccak-512 */
+    /* keccak-512 (rate = 72 bytes = 9 uint64 words)
+     * Input: 64 bytes (8 words) → padding at byte 64 (0x01) and byte 71 (0x80)
+     * Both land in state[8]: low byte = 0x01, high byte = 0x80 */
     uint64_t state[25] = {};
     for (int i = 0; i < 8; ++i) state[i] = mix[i];
-    state[8] = 0x0000000000000001ULL;  /* padding */
-    state[8 + 1] = 0;
-    /* rate = 72 bytes = 9 uint64, so state[8] gets padding */
-    state[8] |= 0x01;
-    state[71/8] |= 0x8000000000000000ULL;
+    state[8] = 0x8000000000000001ULL;
     d_keccak_f1600(state);
     for (int i = 0; i < 8; ++i) mix[i] = state[i];
 
@@ -147,11 +145,10 @@ __global__ void dag_generate_kernel(
         }
     }
 
-    /* final keccak-512 */
+    /* final keccak-512 (same padding as above) */
     memset(state, 0, sizeof(state));
     for (int i = 0; i < 8; ++i) state[i] = mix[i];
-    state[8] = 0x01;
-    state[71/8] |= 0x8000000000000000ULL;
+    state[8] = 0x8000000000000001ULL;
     d_keccak_f1600(state);
 
     /* write result */

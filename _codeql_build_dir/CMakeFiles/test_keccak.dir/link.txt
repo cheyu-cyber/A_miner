@@ -1,0 +1,1 @@
+/home/runner/work/A_miner/.codeql-scratch/dbs/cpp/working/autobuild/bin/c++ -O3 -DNDEBUG -Wl,--dependency-file=CMakeFiles/test_keccak.dir/link.d CMakeFiles/test_keccak.dir/tests/test_keccak.cpp.o CMakeFiles/test_keccak.dir/src/kawpow/keccak.cpp.o CMakeFiles/test_keccak.dir/src/utils/hex.cpp.o -o test_keccak
