@@ -1,0 +1,28 @@
+# Build directories
+build/
+cmake-build-*/
+_codeql_build_dir/
+_codeql_detected_source_root
+
+# IDE files
+.idea/
+.vscode/
+*.swp
+*.swo
+*~
+
+# Compiled objects
+*.o
+*.obj
+*.a
+*.lib
+*.so
+*.dylib
+
+# Executables
+a_miner
+*.exe
+
+# OS files
+.DS_Store
+Thumbs.db
