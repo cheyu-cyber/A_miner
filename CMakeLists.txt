@@ -4,6 +4,11 @@ project(a_miner LANGUAGES CXX)
 set(CMAKE_CXX_STANDARD 17)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
 
+if(NOT CMAKE_BUILD_TYPE AND NOT CMAKE_CONFIGURATION_TYPES)
+    set(CMAKE_BUILD_TYPE Release CACHE STRING "Build type" FORCE)
+    set_property(CACHE CMAKE_BUILD_TYPE PROPERTY STRINGS "Debug" "Release" "RelWithDebInfo" "MinSizeRel")
+endif()
+
 # ---------- optional CUDA support ----------
 include(CheckLanguage)
 check_language(CUDA)
@@ -43,15 +48,31 @@ target_include_directories(a_miner PRIVATE
     ${CMAKE_SOURCE_DIR}/src
 )
 
+target_compile_definitions(a_miner PRIVATE
+    AMINER_BUILD_TYPE="${CMAKE_BUILD_TYPE}"
+)
+
 target_link_libraries(a_miner PRIVATE Threads::Threads)
 if(OPENSSL_FOUND)
     target_link_libraries(a_miner PRIVATE OpenSSL::SSL OpenSSL::Crypto)
 endif()
 
 if(CUDA_FOUND)
+    if(NOT DEFINED CMAKE_CUDA_ARCHITECTURES)
+        set(CMAKE_CUDA_ARCHITECTURES 86)
+    endif()
+
     set_target_properties(a_miner PROPERTIES
         CUDA_SEPARABLE_COMPILATION ON
-        CUDA_ARCHITECTURES "61;70;75;80;86;89;90"
+        CUDA_ARCHITECTURES "${CMAKE_CUDA_ARCHITECTURES}"
+    )
+
+    target_compile_definitions(a_miner PRIVATE
+        AMINER_CUDA_ARCHS="${CMAKE_CUDA_ARCHITECTURES}"
+    )
+else()
+    target_compile_definitions(a_miner PRIVATE
+        AMINER_CUDA_ARCHS="CPU_ONLY"
     )
 endif()
 

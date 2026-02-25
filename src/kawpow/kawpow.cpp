@@ -63,6 +63,7 @@ static uint32_t kawpow_math(uint32_t a, uint32_t b, uint32_t sel) {
         case 7:  return a ^ b;
         case 8:  return __builtin_clz(a) + __builtin_clz(b);
         case 9:  return __builtin_popcount(a) + __builtin_popcount(b);
+        case 10: return (a > b) ? a : b;
         default: return (a < b) ? a : b;
     }
 }

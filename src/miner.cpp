@@ -34,6 +34,11 @@ void Miner::start() {
     m_hash_count = 0;
     m_shares = 0;
     m_start_time = std::chrono::steady_clock::now();
+    {
+        std::lock_guard<std::mutex> lock(m_stats_mutex);
+        m_last_hash_count = 0;
+        m_last_hashrate_time = m_start_time;
+    }
 
     /* configure stratum */
     m_stratum.set_pool(m_cfg.pool_host, m_cfg.pool_port);
@@ -55,9 +60,19 @@ void Miner::stop() {
 }
 
 double Miner::hashrate() const {
-    auto elapsed = std::chrono::steady_clock::now() - m_start_time;
+    auto now = std::chrono::steady_clock::now();
+    uint64_t current = m_hash_count.load();
+
+    std::lock_guard<std::mutex> lock(m_stats_mutex);
+    auto elapsed = now - m_last_hashrate_time;
     double secs = std::chrono::duration<double>(elapsed).count();
-    return (secs > 0) ? m_hash_count.load() / secs : 0.0;
+    if (secs <= 0.0)
+        return 0.0;
+
+    uint64_t delta = current - m_last_hash_count;
+    m_last_hash_count = current;
+    m_last_hashrate_time = now;
+    return static_cast<double>(delta) / secs;
 }
 
 uint64_t Miner::shares_found() const {

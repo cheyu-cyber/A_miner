@@ -15,6 +15,7 @@
 #include <mutex>
 #include <atomic>
 #include <thread>
+#include <unordered_set>
 
 namespace stratum {
 
@@ -71,6 +72,8 @@ private:
     std::atomic<int>  m_req_id{1};
     OnJobCallback     m_on_job;
     mutable std::mutex m_send_mutex;
+    mutable std::mutex m_submit_mutex;
+    std::unordered_set<int> m_pending_submit_ids;
 };
 
 } // namespace stratum

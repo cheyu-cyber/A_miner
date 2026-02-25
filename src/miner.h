@@ -16,6 +16,7 @@
 #include <mutex>
 #include <thread>
 #include <vector>
+#include <chrono>
 
 class Miner {
 public:
@@ -65,4 +66,7 @@ private:
     std::atomic<uint64_t>   m_hash_count{0};
     std::atomic<uint64_t>   m_shares{0};
     std::chrono::steady_clock::time_point m_start_time;
+    mutable std::mutex      m_stats_mutex;
+    mutable uint64_t        m_last_hash_count = 0;
+    mutable std::chrono::steady_clock::time_point m_last_hashrate_time;
 };

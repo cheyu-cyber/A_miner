@@ -89,10 +89,14 @@ int main(int argc, char* argv[]) {
         "  ║   A_miner – Ravencoin KawPow GPU Miner   ║\n"
         "  ╚═══════════════════════════════════════════╝\n"
         "\n"
+        "  Build:  %s\n"
+        "  Arch:   %s\n"
         "  Pool:   %s:%u\n"
         "  Wallet: %s\n"
         "  GPU:    %d\n"
         "\n",
+        AMINER_BUILD_TYPE,
+        AMINER_CUDA_ARCHS,
         cfg.pool_host.c_str(), cfg.pool_port,
         cfg.wallet.c_str(), cfg.gpu_id);
 

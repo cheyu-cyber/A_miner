@@ -17,6 +17,7 @@
 #include <poll.h>
 #include <sstream>
 #include <algorithm>
+#include <vector>
 
 namespace stratum {
 
@@ -135,6 +136,10 @@ bool StratumClient::connect() {
 
 void StratumClient::disconnect() {
     m_connected = false;
+    {
+        std::lock_guard<std::mutex> lock(m_submit_mutex);
+        m_pending_submit_ids.clear();
+    }
     if (m_sock >= 0) {
         close(m_sock);
         m_sock = -1;
@@ -154,16 +159,33 @@ bool StratumClient::submit(
     if (!m_connected) return false;
 
     int id = m_req_id++;
-    char buf[512];
-    snprintf(buf, sizeof(buf),
-        "{\"id\":%d,\"method\":\"mining.submit\","
-        "\"params\":[\"%s\",\"%s\",\"%016llx\",\"%s\",\"%s\"]}\n",
-        id, m_user.c_str(), job_id.c_str(),
-        (unsigned long long)nonce, header_hash.c_str(), mix_hash.c_str());
+    std::ostringstream oss;
+    oss << "{\"id\":" << id
+        << ",\"method\":\"mining.submit\",\"params\":[\""
+        << m_user << "\",\""
+        << job_id << "\",\"";
+
+    char nonce_buf[32];
+    std::snprintf(nonce_buf, sizeof(nonce_buf), "%016llx", (unsigned long long)nonce);
+    oss << nonce_buf << "\",\""
+        << header_hash << "\",\""
+        << mix_hash << "\"]}\n";
+
+    std::string payload = oss.str();
+
+    {
+        std::lock_guard<std::mutex> lock(m_submit_mutex);
+        m_pending_submit_ids.insert(id);
+    }
 
     util::log_info("Submitting share: job=%s nonce=%016llx",
                    job_id.c_str(), (unsigned long long)nonce);
-    return send_line(buf);
+    if (!send_line(payload)) {
+        std::lock_guard<std::mutex> lock(m_submit_mutex);
+        m_pending_submit_ids.erase(id);
+        return false;
+    }
+    return true;
 }
 
 bool StratumClient::send_line(const std::string& json) {
@@ -298,11 +320,22 @@ void StratumClient::handle_response(const std::string& line) {
             util::log_warn("Pool error: %s", err_msg.c_str());
     }
 
-    /* accepted / rejected share feedback */
-    if (line.find("\"result\"") != std::string::npos) {
-        if (line.find("true") != std::string::npos)
+    int64_t id = json_int("id", line, -1);
+    bool is_submit_response = false;
+    if (id >= 0) {
+        std::lock_guard<std::mutex> lock(m_submit_mutex);
+        auto it = m_pending_submit_ids.find(static_cast<int>(id));
+        if (it != m_pending_submit_ids.end()) {
+            is_submit_response = true;
+            m_pending_submit_ids.erase(it);
+        }
+    }
+
+    /* accepted / rejected share feedback (only for mining.submit responses) */
+    if (is_submit_response && line.find("\"result\"") != std::string::npos) {
+        if (line.find("\"result\":true") != std::string::npos)
             util::log_info("Share accepted");
-        else if (line.find("false") != std::string::npos)
+        else if (line.find("\"result\":false") != std::string::npos)
             util::log_warn("Share rejected");
     }
 }
